@@ -5,6 +5,7 @@ import asyncio
 import datetime
 import pickle
 import random
+import datetime_formatting
 
 VERSION = "0.1"
 
@@ -15,6 +16,13 @@ prefix = ""         # Your preferred command prefix
 Client = discord.Client()
 bot = commands.Bot(command_prefix=prefix)
 allowed_channels = {"440720123448393728"}
+
+
+#   TODO
+#   Add bodies to set_bot_cooldown() and set_user_cooldown()
+#   Allow toggle on bot_allow()
+#   Implement time display formatting
+#   Replace redundant context.message.content.* with more readable alternatives
 
 
 # Verifies if the role list of the user has a role that is allowed to manage the bot
@@ -74,6 +82,7 @@ async def bot_allow(context):
         except IndexError:
             x = context.message.channel.id
         allowed_channels.add(x)
+        save()
         await bot.say("Added channel <#%s> to the allowed list" % x)
     else:
         await bot.say("You do not have the permission to use that command")
@@ -89,6 +98,16 @@ async def bot_shutdown(context):
         await bot.say("You do not have the permission to use that command")
 
 
+@bot.command(name="bot cooldown", pass_context=True)
+async def set_bot_cooldown(context):
+    return
+
+
+@bot.command(name="user cooldown", pass_context=True)
+async def set_user_cooldown(context):
+    return
+
+
 # All user commands
 @bot.command(name="info")
 async def bot_info():
@@ -102,7 +121,8 @@ async def bot_dank(context):
     user = context.message.author.id
     if user_on_timeout(user):
         wait_time = user_timeouts[user] - datetime.datetime.now()
-        await bot.say("Not so fast <@%s>, you have to wait %s to try again" % (user, str(wait_time)))
+        await bot.say("Not so fast <@%s>, you have to wait %s to try again" %
+                      (user, wait_time - datetime.timedelta(microseconds=wait_time.microseconds)))
     elif on_timeout():
         new_user_timeout = datetime.datetime.now() + user_cooldown
         await bot.say("Someone has just said that <@%s>! Try again in %s" % (user, user_cooldown))
