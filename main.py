@@ -8,9 +8,9 @@ import random
 
 VERSION = "0.1"
 
-manage_roles = {"457241869680902157"}  # List of role id's that are allowed to manage the bot
-token = "NDU3MjMwMzMzNDYxNTI4NTc2.DgXfsg.V3aPIgNqkIt_Xg0f2PVlLqKhSAA"  # Your bot token goes here
-prefix = "%"  # Your preferred command prefix
+manage_roles = {}   # List of role id's that are allowed to manage the bot
+token = ""          # Your bot token goes here
+prefix = ""         # Your preferred command prefix
 
 Client = discord.Client()
 bot = commands.Bot(command_prefix=prefix)
