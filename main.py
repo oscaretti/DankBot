@@ -18,13 +18,6 @@ bot = commands.Bot(command_prefix=prefix)
 allowed_channels = {"440720123448393728"}
 
 
-#   TODO
-#   Add bodies to set_bot_cooldown() and set_user_cooldown()
-#   Allow toggle on bot_allow()
-#   Implement time display formatting
-#   Replace redundant context.message.content.* with more readable alternatives
-
-
 # Verifies if the role list of the user has a role that is allowed to manage the bot
 def can_manage(roles):
     for role in roles:
@@ -74,16 +67,19 @@ async def on_ready():
 # Management commands
 @bot.command(name="allow", pass_context=True)
 async def bot_allow(context):
-    cont = str(context.message.content)
     if can_manage(context.message.author.roles):
-        args = cont.split(sep=" ")
+        args = context.message.content.split(sep=" ")
         try:
             x = args[1]
         except IndexError:
             x = context.message.channel.id
-        allowed_channels.add(x)
+        if x in allowed_channels:
+            allowed_channels.remove(x)
+            await bot.say("Removed channel <#%s> from the allowed list" % x)
+        else:
+            allowed_channels.add(x)
+            await bot.say("Added channel <#%s> to the allowed list" % x)
         save()
-        await bot.say("Added channel <#%s> to the allowed list" % x)
     else:
         await bot.say("You do not have the permission to use that command")
 
@@ -98,14 +94,33 @@ async def bot_shutdown(context):
         await bot.say("You do not have the permission to use that command")
 
 
-@bot.command(name="bot cooldown", pass_context=True)
+@bot.command(name="bot_cooldown", pass_context=True)
 async def set_bot_cooldown(context):
-    return
+    if can_manage(context.message.author.roles):
+        args = context.message.content.split()
+        args = args[1:]
+        args1, args2 = " ".join(args).split("/")
+        args1.strip()
+        args2.strip()
+        global bot_cooldown, bot_cooldown_deviation
+        bot_cooldown = datetime_formatting.read_timedelta(args1.split())
+        bot_cooldown_deviation = float(args2)
+        await bot.say("Set the bot cooldown to %s and it's deviation to %s%%" %
+                      (datetime_formatting.neat_timedelta(bot_cooldown),
+                       str(bot_cooldown_deviation*100).split(".")[0]))
+    else:
+        await bot.say("You do not have the permission to use that command")
 
 
-@bot.command(name="user cooldown", pass_context=True)
+@bot.command(name="user_cooldown", pass_context=True)
 async def set_user_cooldown(context):
-    return
+    if can_manage(context.message.author.roles):
+        args = context.message.content.split()
+        global user_cooldown
+        user_cooldown = datetime_formatting.read_timedelta(args[1:])
+        await bot.say("Set the user cooldown to %s" % datetime_formatting.neat_timedelta(user_cooldown))
+    else:
+        await bot.say("You do not have the permission to use that command")
 
 
 # All user commands
@@ -117,15 +132,18 @@ async def bot_info():
 @bot.command(name="dank", pass_context=True)
 async def bot_dank(context):
     if context.message.channel.id not in allowed_channels:
+        await bot.say("This command is not allowed here")
         return
     user = context.message.author.id
     if user_on_timeout(user):
         wait_time = user_timeouts[user] - datetime.datetime.now()
+        wait_time = wait_time - datetime.timedelta(microseconds=wait_time.microseconds)
         await bot.say("Not so fast <@%s>, you have to wait %s to try again" %
-                      (user, wait_time - datetime.timedelta(microseconds=wait_time.microseconds)))
+                      (user, datetime_formatting.neat_timedelta(wait_time)))
     elif on_timeout():
         new_user_timeout = datetime.datetime.now() + user_cooldown
-        await bot.say("Someone has just said that <@%s>! Try again in %s" % (user, user_cooldown))
+        await bot.say("Someone has just said that <@%s>! Try again in %s" %
+                      (user, datetime_formatting.neat_timedelta(user_cooldown)))
         user_timeouts[user] = new_user_timeout
     else:
         if user in user_score:
@@ -148,6 +166,7 @@ async def bot_dank(context):
 @bot.command(name="score", pass_context=True)
 async def bot_score(context):
     if context.message.channel.id not in allowed_channels:
+        await bot.say("This command is not allowed here")
         return
     user = context.message.author.id
     if user in user_score:
